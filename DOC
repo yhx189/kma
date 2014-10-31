@@ -1,0 +1,74 @@
+.\" Process this file with
+.\" groff -man -Tascii DOC
+.\"
+.TH KMA "OCT 2014" Linux "User Manuals"
+.SH NAME
+kma \- Kernel Memory Allocation for Operating Systems project
+.SH SYNOPSIS
+.B ./kma
+.SH DESCRIPTION
+.B  This is a course project as kernel memory allocation. We implemented several mainstream allocation algorithms, including resource map, buddy system, lazy buddy system, p2fl
+.B and McKusick-Karels. 
+
+
+.IP "Basic Points"
+
+.BR "resource map"
+
+
+.BR "buddy system"
+
+.B Buddy system is implemented combining free buffer coalescing with a-power-of-two allocator. The most challeging part is to dynamically allocate pages for assistant data structures, such as free lists and bitmaps. We utilized the following intuition - Put all assistant data structures in the very first pages dynamically allocated in the memory, instead of using "malloc".
+.B We designed 1. sys_header, which stores pointers for free lists, page headers, allocated page numbers, allocated block numbers, etc, 2.page header, which stores bitmaps and base address for each page used for allocating blocks. When the first page of assistant data structures is full, we allocate another page to continue. These pages
+.B will all be freed after use.
+
+
+
+.IP "Extra Points"
+
+.BR "SVR4 lazy buddy"
+.B Lazy buddy is similar to buddy system in many aspects, except for delayed coalescing. During allocation request, if the selected block is locally free, slack number is increased by 2.
+.B Else, slack number is increased by 1.
+.B During block free request, if slack number equals or is larger than 2, mark it locally free and free it locally, and decrease the slack number by 2.
+.B Else, if slack number is 1, we mark it globally free and free it globally.
+.B Else, if slack number is 0, we mark it globally free and free it globally. In addition, we select one locally free block in the higher level, 
+.B and free it globally.
+.B The difference between globally free and locally free lies in if the bitmap is set.
+ 
+.BR "power of two free list"
+
+
+.BR "McKusick-Karels "
+
+.IP "Contest Results and Evaluation"
+.B Our buddy system reaches a competition score 1.15, and best runtime 0.71. After detailed analysis, we found that best utilization rate reaches 0.71, while worst is 0.003, when about to free the last page. 
+
+.B Our lazy buddy algorithm has similar performance, except for the free page performance. The worst case is reduced from more than 4 million ns to 76 thousand ns, and an average from 965 to 894.
+
+.\"SH OPTIONS
+
+.\".SH FILES
+.\".I /etc/foo.conf
+.\".RS
+.\"The system wide configuration file. See
+.\".BR foo (5)
+.\"for further details.
+.\".RE
+.\".I ~/.foorc
+.\".RS
+.\"Per user configuration file. See
+.\".BR foo (5)
+.\"for further details.
+.\".SH ENVIRONMENT
+.SH DIAGNOSTICS
+
+.SH TO BE DONE
+.SH AUTHOR
+
+.B Weixiao Fu (wfj797) <weixiaofu2014@u.northwestern.edu               
+
+.B Yang Hu (yhx189) <yanghu2019@u.northwestern.edu>
+.\"SH "SEE ALSO"
+.\"BR bar (1),
+.\"BR foo (5),
+.\"BR xyzzy (1)

@@ -1,0 +1,263 @@
+/***************************************************************************
+ *  Title: Kernel Memory Allocator
+ * -------------------------------------------------------------------------
+ *    Purpose: Kernel memory allocator based on the buddy algorithm
+ *    Author: Stefan Birrer
+ *    Copyright: 2004 Northwestern University
+ ***************************************************************************/
+/***************************************************************************
+ *  ChangeLog:
+ * -------------------------------------------------------------------------
+ *    Revision 1.2  2009/10/31 21:28:52  jot836
+ *    This is the current version of KMA project 3.
+ *    It includes:
+ *    - the most up-to-date handout (F'09)
+ *    - updated skeleton including
+ *        file-driven test harness,
+ *        trace generator script,
+ *        support for evaluating efficiency of algorithm (wasted memory),
+ *        gnuplot support for plotting allocation and waste,
+ *        set of traces for all students to use (including a makefile and README of the settings),
+ *    - different version of the testsuite for use on the submission site, including:
+ *        scoreboard Python scripts, which posts the top 5 scores on the course webpage
+ *
+ *    Revision 1.1  2005/10/24 16:07:09  sbirrer
+ *    - skeleton
+ *
+ *    Revision 1.2  2004/11/05 15:45:56  sbirrer
+ *    - added size as a parameter to kma_free
+ *
+ *    Revision 1.1  2004/11/03 23:04:03  sbirrer
+ *    - initial version for the kernel memory allocator project
+ *
+ ***************************************************************************/
+#ifdef KMA_BUD
+#define __KMA_IMPL__
+
+/************System include***********************************************/
+#include <assert.h>
+#include <stdlib.h>
+#include <math.h>
+/************Private include**********************************************/
+#include "kma_page.h"
+#include "kma.h"
+
+/************Defines and Typedefs*****************************************/
+/*  #defines and typedefs should have their names in all caps.
+ *  Global variables begin with g. Global constants with k. Local
+ *  variables should be in all lower case. When initializing
+ *  structures and arrays, line everything up in neat columns.
+ */
+
+/************Global Variables*********************************************/
+
+/************Function Prototypes******************************************/
+	
+/************External Declaration*****************************************/
+
+/**************Implementation***********************************************/
+#define MAXSIZE 4096
+// 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096
+
+#define MINSIZE 8
+
+typedef struct block{
+int size;
+void * ptr;  
+struct block * next;
+} block_t;
+
+
+typedef struct page_header_t{
+void * ptr;  
+int page_id;
+unsigned char bm[64] ;
+}page_header;
+
+typedef struct main_head{
+
+
+}sys_header;
+
+
+
+void* splitBlock(int round_size, page_header *pgheader);
+static int first_time = 1;
+void* head;
+
+void *createNewPage(int round_size)  
+ // if there is no block available
+{
+  // page_header* pheader;
+   kma_page_t * page = get_page();
+   if(first_time==1) {
+	first_time=0;
+        head = page->ptr; 
+   }
+   int page_id = page->id;
+  // pheader[page->id]->head = page->ptr;
+   int new_block_num = 0;
+   if (round_size == MAXSIZE){
+       page = get_page();
+       *((kma_page_t**)page->ptr) = page; 
+   return page -> ptr + sizeof(kma_page_t*) ;    
+   } else{
+       /* create a new free list */
+       pheader[page_id] = (page_header*)page->ptr;
+       (*pheader[page_id]).ptr = page->ptr;
+       (*pheader[page_id]).page_id = page_id;
+       page->ptr += sizeof(page_header*);
+      
+      printf("%p\n", pheader[page_id]);
+      printf("%p\n", pheader[page_id]->ptr);
+      printf("%d\n", pheader[page_id]->page_id); 
+      printf("%p\n", (block_t*)page->ptr); 
+       int i;
+      for (i=0; i<sizeof(pheader[page_id]->bm);i++)
+       		(*pheader[page_id]). bm[i] = (unsigned char)0;
+      for(i = 0; i<10;i++){
+        
+          pheader[page_id] -> block_headers[i] =  (block_t*)page->ptr ;
+        
+          (*(*pheader[page_id]).block_headers[i]).size = 8<<i;
+          (*(*pheader[page_id]).block_headers[i]).ptr = page->ptr;
+          page->ptr += sizeof(block_t*);
+           
+          pheader[page_id]->block_headers[i]->next= NULL;
+         // printf("page ptr is %p\n", page->ptr);
+         // printf("block_t * page ptr is %p\n", (block_t*)page->ptr);
+          // printf("pheader[page_id] addr is %p\n", pheader[page_id]);
+        }
+      
+       new_block_num++;
+       page->ptr += sizeof(block_t*);
+       block_t * new_block0 = (block_t*)page->ptr;
+       new_block0->ptr = page->ptr;
+       new_block0->next = NULL;      
+       printf("page->ptr = %p\n", page->ptr);
+       new_block0->size = MAXSIZE;
+       (*pheader[page_id]).block_headers[9]->next = new_block0;
+        for (i=0;i<10;i++)
+           { printf("block header i = %p\n",  (*(*pheader[page_id]).block_headers[i]) );
+printf("block header i -> next = %p\n", pheader[page_id]->block_headers[i]->next);
+     }
+       page->ptr += sizeof(block_t*);
+       block_t* new_block1 = (block_t*)page->ptr;
+       new_block1->ptr = new_block0->ptr + new_block0->size;
+       new_block1->size = new_block0->size;
+       new_block0->next = new_block1;
+       new_block1->next = NULL;
+       printf("page starting address is %p\n", head); 
+       printf("new page created, page->ptr = %p\n", page->ptr); 
+       return splitBlock(round_size, pheader[page_id] );
+   }
+   
+}
+  
+void* splitBlock(int round_size, page_header* pgheader)
+{
+   printf( "page id is %d\n", (*pgheader).page_id);
+   printf( "next free list ptr size is %d\n", pgheader->block_headers[9]->next
+      ->size);
+  // printf("round size = %d\n",round_size);
+   int i, size = MAXSIZE, index; 
+   for (i=0;i<10;i++)
+      if (pgheader->block_headers[i]->size==round_size)  index=i;
+   int fit_index = index;
+   //printf("index is %d, fit index is %d\n", index, fit_index);
+   for (i=0;i<10;i++)
+        printf("block header i -> next = %p\n", pgheader->block_headers[i]->next);
+   while (index < 9 && pgheader->block_headers[index]->next >= head){
+
+        index++;}
+   block_t * parent = pgheader-> block_headers[index]->next;
+   printf("index is %d, fit index is %d\n", index, fit_index);
+      // set bitmap
+   
+   return pgheader->block_headers[fit_index]->next->ptr;
+} 
+
+void*
+kma_malloc(kma_size_t size)
+{
+  int i,  round_size=8;
+  while(round_size<size)    round_size*= 2;
+  if (round_size + PAGESIZE/MINSIZE > PAGESIZE)
+ 	 return createNewPage(round_size);
+  int j, k;
+  for (i = round_size; i <= MAXSIZE ; i*=2){
+     for (j = 0; j < page_stats()->num_in_use; j++){
+          for (k=0; k<10; k++)
+             if (pheader[j]->block_headers[k]->size == i
+                   && pheader[j]->block_headers[k]->next!=NULL)  
+            	return splitBlock(i, pheader[j]);
+     }
+     if (i == MAXSIZE )    return  createNewPage(round_size);
+        
+  }
+}
+
+void*
+coalBlock(int pid, void *ptr, int size){
+    //int offset = (int)ptr - (int)pheader[pid]->ptr;
+    
+}
+
+void 
+kma_free(void* ptr, kma_size_t size)
+{
+  /***
+ * int i, round_size = 8, page_id = -1;
+    while(round_size < size) round_size<<1;
+    
+    for (i=0; i< page_stats()->num_in_use-1;i++){
+        if((int)pheader[i]->ptr < (int)ptr 
+                    &&(int)pheader[i+1]->ptr < (int)ptr )
+           page_id = i;
+
+    }
+    if (page_id == -1) page_id = page_stats()->num_in_use-1;
+    coalBlock(page_id, ptr, round_size);
+    int k, to_free=1;
+    for(k=0;k<10;k++)
+    	 if (pheader[page_id]->block_headers[k] -> next !=NULL)
+          	 to_free = 0;
+     if(to_free)
+        free_page(ptr);
+****/
+}
+/**********
+  int i, order;
+  block_t * rotate=NULL, * buddy = NULL, * newBlock = NULL;
+  kma_size_t current_size;
+  void * buddy, current_ptr;
+  
+  order = getOrder(size);
+  newBlock = (block_t*) malloc(sizeof(block_t*));
+  newBlock -> next = headers[order]->next;
+  newBlock -> size = getRound(size);
+  newBlock -> ptr = ptr;
+  headers[order]->next = newBlock; 
+  //    assert((int) ptr % 2 == 0);
+  for (i = order; i < MAXORDER; i++){
+     // insert a block to headers[i] -> next
+     // if there is a buddy in the same list, delete both of them
+     // and insert a new block to headers[i+1] -> next
+     // if i == MAXORDER - 1, free page
+    
+     while (rotate -> next != NULL){
+         rotate = newBlock -> next;
+         if (rotate->size == getRound(size) && rotate -> ptr == ptr)
+             buddy = rotate;
+         else rotate = rotate -> next;
+     }
+    
+  }
+  
+  // for buddy system, do coalescing every time you claim a free
+  //
+  
+
+}
+***************/
+#endif // KMA_BUD
